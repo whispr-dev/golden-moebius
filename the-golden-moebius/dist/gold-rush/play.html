@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The California Gold Rush Trail (1849)</title>
+    <!-- Tailwind CSS for modern responsive layout wrapped inside retro CRT styling -->
+    <link rel="stylesheet" href="../assets/trail.css">
+    <style>@font-face{font-family:"Press Start 2P";font-style:normal;font-weight:400;font-display:swap;src:url("../assets/press-start-2p.ttf") format("truetype")}</style>
+    <style>
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background-color: #0b0f0a;
+            color: #33ff33;
+            user-select: none;
+            overflow-x: hidden;
+        }
+
+        /* CRT Effect Overlay */
+        .crt-container {
+            position: relative;
+            background: #111a11;
+            border: 4px solid #336633;
+            box-shadow: 0 0 20px rgba(51, 255, 51, 0.2), inset 0 0 30px rgba(0, 0, 0, 0.8);
+            border-radius: 12px;
+        }
+
+        .crt-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 3px, 6px 100%;
+            pointer-events: none;
+            z-index: 40;
+            border-radius: 12px;
+        }
+
+        /* Scanline animation */
+        .scanline {
+            width: 100%;
+            height: 100px;
+            z-index: 41;
+            background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(51, 255, 51, 0.05) 50%, rgba(0,0,0,0) 100%);
+            opacity: 0.4;
+            position: absolute;
+            bottom: 100%;
+            pointer-events: none;
+            animation: scanline 8s linear infinite;
+        }
+
+        @keyframes scanline {
+            0% { bottom: 100%; }
+            100% { bottom: -100px; }
+        }
+
+        /* Retro Button Styling */
+        .pixel-btn {
+            background-color: #1a331a;
+            border: 2px solid #33ff33;
+            color: #33ff33;
+            box-shadow: 3px 3px 0px #005500;
+            transition: all 0.1s ease;
+            text-transform: uppercase;
+        }
+
+        .pixel-btn:hover:not(:disabled) {
+            background-color: #33ff33;
+            color: #000;
+            box-shadow: 1px 1px 0px #005500;
+            transform: translate(2px, 2px);
+        }
+
+        .pixel-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            border-color: #555555;
+            color: #888888;
+            box-shadow: none;
+        }
+
+        .pixel-card {
+            border: 2px solid #228822;
+            background: #081208;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.1);
+        }
+
+        /* Custom scrollbar for logs */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #081208;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #228822;
+        }
+
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+    </style>
+<link rel="stylesheet" href="../assets/credits.css">
+</head>
+<body class="golden-trail p-2 md:p-6 min-h-screen flex flex-col justify-center items-center">
+  <div class="maker-credit">made by <a href="https://whispr.dev/" target="_blank" rel="noopener noreferrer">whispr.dev</a></div>
+
+    <!-- CRT Container Shell -->
+    <div class="crt-container w-full max-w-5xl p-4 md:p-6 relative overflow-hidden my-auto">
+        <div class="crt-overlay"></div>
+        <div class="scanline"></div>
+
+        <!-- Header Bar -->
+        <header class="flex flex-wrap justify-between items-center pb-4 mb-4 border-b-2 border-green-800 gap-2">
+            <div>
+                <h1 class="text-sm md:text-xl font-bold tracking-wider text-amber-400 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
+                    GOLD RUSH TRAIL '49
+                </h1>
+                <p class="text-[10px] text-green-500 mt-1">INDEPENDENCE, MO TO SUTTER'S MILL, CA</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="soundToggleBtn" class="pixel-btn text-[10px] px-3 py-2 flex items-center gap-1">
+                    🔊 SOUND: <span id="soundStatus">ON</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Dynamic Game Screen Container -->
+        <div id="gameView" class="min-h-[460px] flex flex-col justify-between">
+            <!-- Screen Content dynamically injected via JS -->
+        </div>
+
+        <!-- Global Log / Console Footer -->
+        <footer class="mt-4 pt-3 border-t-2 border-green-900 text-[10px]">
+            <div class="flex justify-between text-amber-500 mb-1">
+                <span>SYSTEM LOG:</span>
+                <span id="logDate">APRIL 1, 1849</span>
+            </div>
+            <div id="eventLog" class="h-20 overflow-y-auto bg-black p-2 border border-green-900 text-green-400 leading-relaxed font-mono">
+                > Welcome Pioneer! Prepare your party to make the perilous journey west...
+            </div>
+        </footer>
+    </div>
+
+    <!-- MAIN GAME SCRIPT -->
+    <script>
+        // ==========================================
+        // 1. AUDIO SYNTHESIS (Web Audio API Chiptune)
+        // ==========================================
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playTone(freq, duration, type = 'square', volume = 0.1) {
+                if (!this.enabled) return;
+                this.init();
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.00001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) { console.error(e); }
+            }
+
+            playBlip() { this.playTone(440, 0.08, 'square', 0.08); }
+            playClick() { this.playTone(800, 0.03, 'triangle', 0.05); }
+            playAlert() { 
+                this.playTone(220, 0.1, 'sawtooth', 0.12);
+                setTimeout(() => this.playTone(180, 0.2, 'sawtooth', 0.12), 100);
+            }
+            playFanfare() {
+                const notes = [261, 329, 392, 523];
+                notes.forEach((freq, i) => {
+                    setTimeout(() => this.playTone(freq, 0.15, 'square', 0.1), i * 120);
+                });
+            }
+            playDeathJingle() {
+                const notes = [300, 280, 260, 200];
+                notes.forEach((freq, i) => {
+                    setTimeout(() => this.playTone(freq, 0.2, 'sawtooth', 0.1), i * 180);
+                });
+            }
+            playShot() { this.playTone(120, 0.08, 'sawtooth', 0.2); }
+        }
+
+        const audio = new SoundEngine();
+
+        // ==========================================
+        // 2. GAME STATE & DATA STRUCTURES
+        // ==========================================
+        const ARCHETYPES = {
+            MERCHANT: { title: "Boston Merchant", cash: 1600, bonus: "The largest starting purse. Supplies still run out." },
+            FARMER: { title: "Missouri Farmer", cash: 1000, bonus: "A balanced starting budget for the long trail." },
+            GAMBLER: { title: "New York Gambler", cash: 1200, bonus: "A mid-sized purse and a taste for uncertain outcomes." },
+            MOUNTAIN_MAN: { title: "Experienced Trapper", cash: 800, bonus: "The leanest starting purse. Every purchase counts." }
+        };
+
+        const STORE_PRICES = {
+            oxen: 40,      // per yoke (pair)
+            food: 0.20,    // per lb
+            clothing: 10,  // per set
+            ammo: 2,       // per box of 20
+            parts: 10,     // per spare wheel/axle/tongue
+            medicine: 25   // per kit
+        };
+
+        const MILESTONES = [
+            { name: "Independence, MO", distance: 0, desc: "Starting point of your journey." },
+            { name: "Fort Laramie", distance: 650, desc: "A key trading post in Wyoming.", store: true },
+            { name: "Independence Rock", distance: 815, desc: "Carve your name into the iconic granite landmark!" },
+            { name: "South Pass (Rockies)", distance: 950, desc: "Continental Divide. The air grows cold and thin." },
+            { name: "Fort Hall / Salt Lake", distance: 1150, desc: "Preparation point before the brutal desert.", store: true },
+            { name: "Humboldt Sink / 40-Mile Desert", distance: 1400, desc: "Deadly dry stretch with scorching sands." },
+            { name: "Sierra Nevada (Donner Pass)", distance: 1750, desc: "Treacherous high cliffs, snow, and steep drops." },
+            { name: "Sutter's Mill / Placerville", distance: 2000, desc: "The Goldfields! You survived!" }
+        ];
+
+        function createInitialGameState() {
+            return {
+                archetype: null,
+                leaderName: "Pioneer",
+                party: [], // Array of { name, health: 0-100, status: "Good" }
+                cash: 0,
+                date: new Date(1849, 3, 1), // April 1, 1849
+                distance: 0,
+                targetDistance: 2000,
+                nextMilestoneIndex: 1,
+                pace: "STEADY", // STEADY, STRENUOUS, GRUELING
+                rations: "FILLING", // FILLING, MEAGER, BARE_BONES
+                supplies: {
+                    oxen: 0,
+                    food: 0,
+                    clothing: 0,
+                    ammo: 0,
+                    parts: 0,
+                    medicine: 0
+                },
+                wagonHealth: 100,
+                weather: "Clear",
+                goldMined: 0,
+                gameOver: false,
+                victorious: false
+            };
+        }
+
+        let gameState = createInitialGameState();
+
+        // UI Container
+        const gameView = document.getElementById('gameView');
+        const eventLog = document.getElementById('eventLog');
+        const logDate = document.getElementById('logDate');
+
+        function log(msg, color = 'text-green-400') {
+            const entry = document.createElement('div');
+            entry.className = `${color} mb-1`;
+            entry.textContent = `> ${msg}`;
+            eventLog.appendChild(entry);
+            eventLog.scrollTop = eventLog.scrollHeight;
+        }
+
+        // ==========================================
+        // 3. UI SCREEN CONTROLLERS
+        // ==========================================
+
+        // --- SCREEN 1: CHARACTER CREATION ---
+        function showCharacterSelect() {
+            // A retry is a fresh expedition, including the date and end flags.
+            gameState = createInitialGameState();
+            logDate.innerText = "APRIL 1, 1849";
+            eventLog.textContent = "> Welcome Pioneer! Prepare your party to make the perilous journey west...";
+            gameView.innerHTML = `
+                <div class="space-y-4">
+                    <h2 class="text-amber-400 text-sm md:text-base border-b border-green-800 pb-2">STEP 1: CHOOSE YOUR ARCHETYPE</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="archetypeGrid"></div>
+                    
+                    <div class="pixel-card p-3 rounded mt-4">
+                        <label class="block text-[11px] text-amber-300 mb-2">ENTER YOUR LEADER NAME:</label>
+                        <input type="text" id="leaderInput" value="Captain James" class="bg-black border border-green-600 p-2 text-green-300 w-full text-xs font-mono uppercase focus:outline-none focus:border-amber-400">
+                    </div>
+
+                    <div class="pixel-card p-3 rounded">
+                        <label class="block text-[11px] text-amber-300 mb-2">NAME YOUR 4 COMPANIONS:</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" id="comp0" value="Abigail" class="bg-black border border-green-800 p-1 text-xs text-green-300 font-mono">
+                            <input type="text" id="comp1" value="Zebediah" class="bg-black border border-green-800 p-1 text-xs text-green-300 font-mono">
+                            <input type="text" id="comp2" value="Clement" class="bg-black border border-green-800 p-1 text-xs text-green-300 font-mono">
+                            <input type="text" id="comp3" value="Susannah" class="bg-black border border-green-800 p-1 text-xs text-green-300 font-mono">
+                        </div>
+                    </div>
+
+                    <button id="btnConfirmParty" class="pixel-btn w-full py-3 text-xs text-amber-300">CONTINUE TO GENERAL STORE &rarr;</button>
+                </div>
+            `;
+
+            const grid = document.getElementById('archetypeGrid');
+            let selectedKey = "FARMER";
+
+            Object.keys(ARCHETYPES).forEach(key => {
+                const arch = ARCHETYPES[key];
+                const card = document.createElement('div');
+                card.className = `pixel-card p-3 rounded cursor-pointer transition-all ${key === selectedKey ? 'border-amber-400 bg-green-950/40' : ''}`;
+                card.innerHTML = `
+                    <div class="text-xs text-amber-400 font-bold mb-1">${arch.title}</div>
+                    <div class="text-[10px] text-green-300">Cash: $${arch.cash}</div>
+                    <div class="text-[9px] text-gray-400 mt-2">${arch.bonus}</div>
+                `;
+                card.onclick = () => {
+                    audio.playClick();
+                    selectedKey = key;
+                    Array.from(grid.children).forEach(c => c.classList.remove('border-amber-400', 'bg-green-950/40'));
+                    card.classList.add('border-amber-400', 'bg-green-950/40');
+                };
+                grid.appendChild(card);
+            });
+
+            document.getElementById('btnConfirmParty').onclick = () => {
+                audio.playClick();
+                const lName = document.getElementById('leaderInput').value.trim() || "Pioneer";
+                gameState.archetype = ARCHETYPES[selectedKey];
+                gameState.cash = gameState.archetype.cash;
+                gameState.leaderName = lName;
+                gameState.party = [
+                    { name: lName, health: 100, status: "Good" },
+                    { name: document.getElementById('comp0').value.trim() || "Comp 1", health: 100, status: "Good" },
+                    { name: document.getElementById('comp1').value.trim() || "Comp 2", health: 100, status: "Good" },
+                    { name: document.getElementById('comp2').value.trim() || "Comp 3", health: 100, status: "Good" },
+                    { name: document.getElementById('comp3').value.trim() || "Comp 4", health: 100, status: "Good" }
+                ];
+                showStoreScreen(true);
+            };
+        }
+
+        // --- SCREEN 2: GENERAL STORE ---
+        function showStoreScreen(isInitial = false) {
+            let tempCart = { oxen: 0, food: 0, clothing: 0, ammo: 0, parts: 0, medicine: 0 };
+
+            function calculateTotal() {
+                return (tempCart.oxen * STORE_PRICES.oxen) +
+                       (tempCart.food * STORE_PRICES.food) +
+                       (tempCart.clothing * STORE_PRICES.clothing) +
+                       (tempCart.ammo * STORE_PRICES.ammo) +
+                       (tempCart.parts * STORE_PRICES.parts) +
+                       (tempCart.medicine * STORE_PRICES.medicine);
+            }
+
+            gameView.innerHTML = `
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center border-b border-green-800 pb-2">
+                        <h2 class="text-amber-400 text-xs md:text-sm">INDEPENDENCE GENERAL STORE</h2>
+                        <div class="text-xs text-green-300">CASH: $<span id="storeCash">${gameState.cash}</span></div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-[10px]">
+                        <div class="pixel-card p-2 flex justify-between items-center">
+                            <div>
+                                <span class="text-amber-300">OXEN ($40/pair):</span>
+                                <div class="text-[8px] text-gray-400">Min 2 pairs recommended</div>
+                            </div>
+                            <input type="number" id="buyOxen" min="0" value="3" class="bg-black border border-green-700 w-16 p-1 text-center text-green-300">
+                        </div>
+
+                        <div class="pixel-card p-2 flex justify-between items-center">
+                            <div>
+                                <span class="text-amber-300">FOOD ($0.20/lb):</span>
+                                <div class="text-[8px] text-gray-400">Flour, bacon, coffee</div>
+                            </div>
+                            <input type="number" id="buyFood" min="0" step="50" value="800" class="bg-black border border-green-700 w-16 p-1 text-center text-green-300">
+                        </div>
+
+                        <div class="pixel-card p-2 flex justify-between items-center">
+                            <div>
+                                <span class="text-amber-300">CLOTHING ($10/set):</span>
+                                <div class="text-[8px] text-gray-400">Essential for mountain cold</div>
+                            </div>
+                            <input type="number" id="buyClothing" min="0" value="5" class="bg-black border border-green-700 w-16 p-1 text-center text-green-300">
+                        </div>
+
+                        <div class="pixel-card p-2 flex justify-between items-center">
+                            <div>
+                                <span class="text-amber-300">AMMO ($2/box of 20):</span>
+                                <div class="text-[8px] text-gray-400">For hunting along trail</div>
+                            </div>
+                            <input type="number" id="buyAmmo" min="0" value="10" class="bg-black border border-green-700 w-16 p-1 text-center text-center text-green-300">
+                        </div>
+
+                        <div class="pixel-card p-2 flex justify-between items-center">
+                            <div>
+                                <span class="text-amber-300">SPARE PARTS ($10/ea):</span>
+                                <div class="text-[8px] text-gray-400">Axles, wheels, tongues</div>
+                            </div>
+                            <input type="number" id="buyParts" min="0" value="3" class="bg-black border border-green-700 w-16 p-1 text-center text-green-300">
+                        </div>
+
+                        <div class="pixel-card p-2 flex justify-between items-center">
+                            <div>
+                                <span class="text-amber-300">MEDICINE ($25/kit):</span>
+                                <div class="text-[8px] text-gray-400">Heals cholera, dysentery</div>
+                            </div>
+                            <input type="number" id="buyMedicine" min="0" value="2" class="bg-black border border-green-700 w-16 p-1 text-center text-green-300">
+                        </div>
+                    </div>
+
+                    <div class="pixel-card p-3 text-xs flex justify-between items-center">
+                        <div>TOTAL BILL: <span id="storeTotal" class="text-amber-400">$0</span></div>
+                        <button id="btnCheckout" class="pixel-btn px-4 py-2 text-[10px]">PURCHASE & START TRAIL</button>
+                    </div>
+                </div>
+            `;
+
+            const updateCart = () => {
+                tempCart.oxen = parseInt(document.getElementById('buyOxen').value) || 0;
+                tempCart.food = parseInt(document.getElementById('buyFood').value) || 0;
+                tempCart.clothing = parseInt(document.getElementById('buyClothing').value) || 0;
+                tempCart.ammo = parseInt(document.getElementById('buyAmmo').value) || 0;
+                tempCart.parts = parseInt(document.getElementById('buyParts').value) || 0;
+                tempCart.medicine = parseInt(document.getElementById('buyMedicine').value) || 0;
+
+                const total = calculateTotal();
+                document.getElementById('storeTotal').innerText = `$${total}`;
+                document.getElementById('btnCheckout').disabled = (total > gameState.cash || tempCart.oxen <= 0);
+            };
+
+            ['buyOxen', 'buyFood', 'buyClothing', 'buyAmmo', 'buyParts', 'buyMedicine'].forEach(id => {
+                document.getElementById(id).addEventListener('input', updateCart);
+            });
+
+            updateCart();
+
+            document.getElementById('btnCheckout').onclick = () => {
+                const total = calculateTotal();
+                if (total <= gameState.cash && tempCart.oxen > 0) {
+                    audio.playFanfare();
+                    gameState.cash -= total;
+                    gameState.supplies.oxen += tempCart.oxen * 2; // Pairs to individual oxen
+                    gameState.supplies.food += tempCart.food;
+                    gameState.supplies.clothing += tempCart.clothing;
+                    gameState.supplies.ammo += tempCart.ammo * 20;
+                    gameState.supplies.parts += tempCart.parts;
+                    gameState.supplies.medicine += tempCart.medicine;
+
+                    log(`Supplies purchased. Wagon loaded! Onward to California!`);
+                    showMainTrailScreen();
+                }
+            };
+        }
+
+        // --- SCREEN 3: MAIN TRAIL DASHBOARD ---
+        function showMainTrailScreen() {
+            gameView.innerHTML = `
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 text-[10px]">
+                    <!-- Left Column: Pixel Canvas Animation & Map -->
+                    <div class="lg:col-span-2 space-y-3">
+                        <div class="pixel-card p-2 relative">
+                            <canvas id="trailCanvas" width="480" height="180" class="w-full h-auto bg-black rounded border border-green-900"></canvas>
+                            <div class="absolute top-4 left-4 bg-black/80 px-2 py-1 text-amber-400 text-[9px] border border-amber-500/50">
+                                LOC: <span id="currentLocText">PLAINS</span>
+                            </div>
+                        </div>
+
+                        <!-- Trail Controls -->
+                        <div class="grid grid-cols-3 gap-2">
+                            <button id="btnTravel" class="pixel-btn py-3 text-[10px]">CONTINUE TRAIL</button>
+                            <button id="btnRest" class="pixel-btn py-3 text-[10px]">REST (1 DAY)</button>
+                            <button id="btnHunt" class="pixel-btn py-3 text-[10px]">HUNT GAME</button>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="pixel-card p-2 flex justify-between items-center">
+                                <span>PACE:</span>
+                                <button id="btnTogglePace" class="pixel-btn px-2 py-1 text-[9px] text-amber-300">${gameState.pace}</button>
+                            </div>
+                            <div class="pixel-card p-2 flex justify-between items-center">
+                                <span>RATIONS:</span>
+                                <button id="btnToggleRations" class="pixel-btn px-2 py-1 text-[9px] text-amber-300">${gameState.rations}</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Status & Supplies -->
+                    <div class="space-y-3">
+                        <!-- Progress Card -->
+                        <div class="pixel-card p-2 space-y-1">
+                            <div class="text-amber-400 font-bold border-b border-green-800 pb-1">TRAIL STATUS</div>
+                            <div class="flex justify-between"><span>MILES TRAVELED:</span> <span class="text-amber-300">${gameState.distance} / ${gameState.targetDistance} mi</span></div>
+                            <div class="flex justify-between"><span>NEXT MILESTONE:</span> <span class="text-green-300">${MILESTONES[gameState.nextMilestoneIndex].name} (${MILESTONES[gameState.nextMilestoneIndex].distance - gameState.distance} mi)</span></div>
+                            <div class="flex justify-between"><span>WEATHER:</span> <span class="text-cyan-300" id="weatherVal">${gameState.weather}</span></div>
+                            <div class="flex justify-between"><span>WAGON CONDITION:</span> <span id="wagonVal" class="text-green-300">${gameState.wagonHealth}%</span></div>
+                        </div>
+
+                        <!-- Supplies Card -->
+                        <div class="pixel-card p-2 space-y-1">
+                            <div class="text-amber-400 font-bold border-b border-green-800 pb-1">SUPPLIES</div>
+                            <div class="flex justify-between"><span>OXEN:</span> <span>${gameState.supplies.oxen}</span></div>
+                            <div class="flex justify-between"><span>FOOD:</span> <span class="${gameState.supplies.food < 100 ? 'text-red-400 animate-pulse' : ''}">${gameState.supplies.food} lbs</span></div>
+                            <div class="flex justify-between"><span>CLOTHING:</span> <span>${gameState.supplies.clothing} sets</span></div>
+                            <div class="flex justify-between"><span>AMMO:</span> <span>${gameState.supplies.ammo} rounds</span></div>
+                            <div class="flex justify-between"><span>SPARE PARTS:</span> <span>${gameState.supplies.parts}</span></div>
+                            <div class="flex justify-between"><span>MEDICINE:</span> <span>${gameState.supplies.medicine} kits</span></div>
+                            <div class="flex justify-between text-amber-300"><span>CASH:</span> <span>$${gameState.cash}</span></div>
+                        </div>
+
+                        <!-- Party Roster -->
+                        <div class="pixel-card p-2 space-y-1">
+                            <div class="text-amber-400 font-bold border-b border-green-800 pb-1">PARTY HEALTH</div>
+                            <div id="partyList" class="space-y-1"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            renderPartyStatus();
+            renderTrailCanvas();
+
+            // Handlers
+            document.getElementById('btnTravel').onclick = () => advanceTrail();
+            document.getElementById('btnRest').onclick = () => restParty();
+            document.getElementById('btnHunt').onclick = () => startHuntingMiniGame();
+
+            document.getElementById('btnTogglePace').onclick = () => {
+                audio.playClick();
+                const paces = ["STEADY", "STRENUOUS", "GRUELING"];
+                gameState.pace = paces[(paces.indexOf(gameState.pace) + 1) % paces.length];
+                document.getElementById('btnTogglePace').innerText = gameState.pace;
+            };
+
+            document.getElementById('btnToggleRations').onclick = () => {
+                audio.playClick();
+                const rations = ["FILLING", "MEAGER", "BARE_BONES"];
+                gameState.rations = rations[(rations.indexOf(gameState.rations) + 1) % rations.length];
+                document.getElementById('btnToggleRations').innerText = gameState.rations;
+            };
+        }
+
+        function escapeHTML(value) {
+            return String(value).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+        }
+
+        function renderPartyStatus() {
+            const list = document.getElementById('partyList');
+            if (!list) return;
+            list.innerHTML = '';
+            gameState.party.forEach(p => {
+                const color = p.health > 70 ? 'text-green-400' : (p.health > 30 ? 'text-amber-400' : 'text-red-500 font-bold');
+                list.innerHTML += `
+                    <div class="flex justify-between text-[9px]">
+                        <span>${escapeHTML(p.name)}</span>
+                        <span class="${color}">${p.status} (${p.health}%)</span>
+                    </div>
+                `;
+            });
+        }
+
+        // --- PIXEL CANVAS RENDERING FOR TRAIL ---
+        let wagonFrame = 0;
+        function renderTrailCanvas() {
+            const canvas = document.getElementById('trailCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingEnabled = false;
+
+            // Background Terrain Colors based on mileage
+            let skyColor = "#0d1b2a";
+            let groundColor = "#2b4c10";
+            let mountainColor = "#1b263b";
+
+            if (gameState.distance > 1150 && gameState.distance <= 1600) {
+                // Desert
+                skyColor = "#2b1e10";
+                groundColor = "#c2a649";
+                mountainColor = "#785927";
+            } else if (gameState.distance > 1600) {
+                // Sierra Nevada Mountains / Snow
+                skyColor = "#102a3a";
+                groundColor = "#d8e2dc";
+                mountainColor = "#4a5759";
+            }
+
+            // Draw Sky
+            ctx.fillStyle = skyColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Sun/Moon
+            ctx.fillStyle = "#ffcc00";
+            ctx.fillRect(400, 20, 16, 16);
+
+            // Draw Mountain Silhouettes
+            ctx.fillStyle = mountainColor;
+            for (let i = 0; i < canvas.width; i += 60) {
+                ctx.beginPath();
+                ctx.moveTo(i, 110);
+                ctx.lineTo(i + 30, 40);
+                ctx.lineTo(i + 60, 110);
+                ctx.fill();
+            }
+
+            // Draw Ground
+            ctx.fillStyle = groundColor;
+            ctx.fillRect(0, 110, canvas.width, 70);
+
+            // Draw Trail Path
+            ctx.fillStyle = "#6b5028";
+            ctx.fillRect(0, 135, canvas.width, 12);
+
+            // Draw Oxen & Wagon Animation
+            wagonFrame = (wagonFrame + 1) % 2;
+            const wagonX = 180;
+            const wagonY = 115;
+
+            // Oxen Pair 1
+            ctx.fillStyle = "#8d5b4c";
+            ctx.fillRect(wagonX + 90, wagonY + 12, 28, 14); // Body
+            ctx.fillRect(wagonX + 112, wagonY + 6, 8, 10);  // Head
+            ctx.fillStyle = "#000";
+            // Legs frame animation
+            if (wagonFrame === 0) {
+                ctx.fillRect(wagonX + 92, wagonY + 26, 4, 8);
+                ctx.fillRect(wagonX + 110, wagonY + 26, 4, 8);
+            } else {
+                ctx.fillRect(wagonX + 96, wagonY + 26, 4, 8);
+                ctx.fillRect(wagonX + 106, wagonY + 26, 4, 8);
+            }
+
+            // Wagon Body
+            ctx.fillStyle = "#5c3d11";
+            ctx.fillRect(wagonX, wagonY + 8, 50, 16);
+            // Cover (Canvas)
+            ctx.fillStyle = "#f4f1de";
+            ctx.beginPath();
+            ctx.arc(wagonX + 25, wagonY + 8, 25, Math.PI, 0);
+            ctx.fill();
+
+            // Wheels
+            ctx.fillStyle = "#333";
+            ctx.beginPath();
+            ctx.arc(wagonX + 10, wagonY + 26, 7, 0, Math.PI * 2);
+            ctx.arc(wagonX + 40, wagonY + 26, 7, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // ==========================================
+        // 4. GAME LOGIC & SIMULATION ENGINE
+        // ==========================================
+        function advanceTrail() {
+            if (gameState.gameOver) return;
+
+            // Check supply limits
+            if (gameState.supplies.oxen <= 0) {
+                log("You have no oxen left to pull your wagon! You are stranded.", "text-red-500");
+                triggerGameOver("Stranded in the wilderness without oxen.");
+                return;
+            }
+
+            if (gameState.supplies.food <= 0) {
+                log("You are completely out of food! The party is starving!", "text-red-500");
+            }
+
+            audio.playBlip();
+
+            // Calculate daily movement
+            let baseMiles = gameState.pace === "STEADY" ? 15 : (gameState.pace === "STRENUOUS" ? 22 : 30);
+            if (gameState.supplies.oxen < 4) baseMiles *= 0.7; // Slower with fewer oxen
+            if (gameState.wagonHealth < 50) baseMiles *= 0.8;
+
+            const milesMoved = Math.floor(baseMiles + (Math.random() * 5 - 2));
+            gameState.distance += milesMoved;
+
+            // Advance date
+            gameState.date.setDate(gameState.date.getDate() + 1);
+            logDate.innerText = gameState.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase();
+
+            // Food consumption
+            const rationAmount = gameState.rations === "FILLING" ? 3 : (gameState.rations === "MEAGER" ? 2 : 1);
+            const livingMembers = gameState.party.filter(p => p.health > 0).length;
+            const foodEaten = livingMembers * rationAmount;
+            gameState.supplies.food = Math.max(0, gameState.supplies.food - foodEaten);
+
+            // Health degeneration / regeneration
+            gameState.party.forEach(p => {
+                if (p.health <= 0) return;
+                if (gameState.supplies.food === 0) p.health -= 15;
+                if (gameState.rations === "BARE_BONES") p.health -= 4;
+                if (gameState.pace === "GRUELING") p.health -= 5;
+            });
+
+            // Daily wear and random events use the same health/death handling.
+            if (!updatePartyHealth()) return;
+
+            // Milestone Check
+            const nextM = MILESTONES[gameState.nextMilestoneIndex];
+            if (gameState.distance >= nextM.distance) {
+                gameState.distance = nextM.distance; // Snap to milestone
+                log(`ARRIVED AT MILESTONE: ${nextM.name}!`, "text-amber-400 font-bold");
+                audio.playFanfare();
+
+                if (nextM.name.includes("Sierra Nevada")) {
+                    triggerSierraNevadaEvent();
+                    return;
+                } else if (nextM.name.includes("Sutter's Mill")) {
+                    triggerGoldRushEnding();
+                    return;
+                } else if (nextM.store) {
+                    log(`Trading post available at ${nextM.name}.`);
+                }
+
+                gameState.nextMilestoneIndex++;
+            } else {
+                // Random event chance (25%)
+                if (Math.random() < 0.25) {
+                    triggerRandomEvent();
+                    // Do not overwrite an event-triggered game-over screen.
+                    if (gameState.gameOver) return;
+                } else {
+                    log(`Traveled ${milesMoved} miles. Terrain: ${getTerrainType()}.`);
+                }
+            }
+
+            showMainTrailScreen();
+        }
+
+        function restParty() {
+            audio.playClick();
+            gameState.date.setDate(gameState.date.getDate() + 1);
+            logDate.innerText = gameState.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase();
+
+            // Eat food while resting
+            const living = gameState.party.filter(p => p.health > 0).length;
+            gameState.supplies.food = Math.max(0, gameState.supplies.food - (living * 2));
+
+            // Heal party
+            gameState.party.forEach(p => {
+                if (p.health > 0) {
+                    p.health = Math.min(100, p.health + 15);
+                    if (p.health > 70) p.status = "Good";
+                    else if (p.health > 30) p.status = "Fair";
+                }
+            });
+
+            log("The party rested for a full day. Health restored!");
+            showMainTrailScreen();
+        }
+
+        function getTerrainType() {
+            if (gameState.distance < 950) return "Great Plains";
+            if (gameState.distance < 1400) return "Rocky Mountain Passes";
+            if (gameState.distance < 1750) return "Forty-Mile Desert";
+            return "Sierra Nevada Mountains";
+        }
+
+        // ==========================================
+        // 5. TRIALS, TRIBULATIONS & RANDOM EVENTS
+        // ==========================================
+        const RANDOM_EVENTS = [
+            {
+                title: "DYSENTERY OUTBREAK",
+                desc: "ate bad bacon and contracted severe Dysentery!",
+                effect: (pioneer) => {
+                    pioneer.health -= 35;
+                    log(`DISEASE: ${pioneer.name} ate rancid bacon and caught Dysentery! (-35 HP)`, "text-amber-400");
+                }
+            },
+            {
+                title: "SYPHILLIS OUTBREAK",
+                desc: "played with a strumpet last trading post and contracted foul Syphillis!",
+                effect: (pioneer) => {
+                    pioneer.health -= 35;
+                    log(`DISEASE: ${pioneer.name} played with a strumpet in the last trading post and caught Syphillis! (-35 HP)`, "text-amber-400");
+                }
+            },
+            {
+                title: "HUNTING ACCIDENT",
+                desc: "one of the party mistook someone for a bison and shot him in the Butt!",
+                effect: (pioneer) => {
+                    pioneer.health -= 50;
+                    log(`HUNTING ACCIDENT: ${pioneer.name} is too fat, was mistook for a bison whilst hunting and got shot in the Buttock! (-50 HP)`, "text-amber-400");
+                }
+            },
+            {
+                title: "WRONG CACTUS",
+                desc: "ate bad cactus and wandered off for a Day!",
+                effect: (pioneer) => {
+                    pioneer.health -= 15;
+                    log(`POISONED: ${pioneer.name} ate bad cactus and wandered off for a Day! (-15 HP)`, "text-amber-400");
+                }
+            },
+            {
+                title: "BROKEN AXLE",
+                desc: "The wagon hit a jagged rock and snapped an axle!",
+                effect: () => {
+                    if (gameState.supplies.parts > 0) {
+                        gameState.supplies.parts--;
+                        log("WAGON ACCIDENT: Snapped an axle! You used 1 spare part to repair it.", "text-amber-400");
+                    } else {
+                        gameState.wagonHealth -= 30;
+                        log("WAGON ACCIDENT: Snapped an axle! You have no spare parts! (-30% Wagon Health)", "text-red-400");
+                    }
+                }
+            },
+            {
+                title: "FOOL'S GOLD",
+                desc: "You found a gleaming yellow rock in a dry creek bed!",
+                effect: () => {
+                    log("COMICAL: You found a shiny rock! ...Upon closer inspection, it's just pyrite (Fool's Gold).", "text-yellow-300");
+                }
+            },
+            {
+                title: "CACTUS ANNOYANCE",
+                desc: "An ox strayed into a cactus patch!",
+                effect: () => {
+                    log("ANNOYANCE: An ox strayed into a cactus patch and is severely annoyed. Travel slowed.", "text-amber-300");
+                }
+            },
+            {
+                title: "HAILSTORM",
+                desc: "A massive hailstorm hammers the prairie!",
+                effect: () => {
+                    gameState.party.forEach(p => { if (p.health > 0) p.health -= 10; });
+                    log("WEATHER: Severe hailstorm damages supplies and bruises the party! (-10 HP)", "text-cyan-400");
+                }
+            },
+            {
+                title: "ROCKSLIDE",
+                desc: "A sudden rockslide tumblees across the trail!",
+                effect: () => {
+                    if (gameState.supplies.parts > 0) {
+                        gameState.supplies.parts--;
+                        log("WAGON DAMAGED: Two wheels broken! You used 1 spare part to repair it.", "text-amber-400");
+                    } else {
+                        gameState.wagonHealth -= 30;
+                        log("WAGON DAMAGED: Two wheels broken! You have no spare parts! (-30% Wagon Health)", "text-red-400");
+                    }
+                    gameState.party.forEach(p => { if (p.health > 0) p.health -= 15; });
+                    log("NATURAL DISASTER: Sudden rockslide damages wagon and bruises the party! (-15 HP to all)", "text-cyan-400");
+                }
+            },
+            {
+                title: "SYPHILLIS OUTBREAK",
+                desc: "Someone in the party infects the camp with Syphillis!",
+                effect: () => {
+                    if (gameState.supplies.medicine > 0) {
+                        gameState.supplies.medicine--;
+                        log("MEDICAL EMERGENCY: Syphillis outbreak! Used 1 medicine kit to cure the team.", "text-green-400");
+                    } else {
+                        gameState.party.forEach(p => { if (p.health > 0) p.health -= 25; });
+                        log("MEDICAL EMERGENCY: Syphillis outbreak with no medicine! (-25 HP to all)", "text-red-500");
+                    }
+                }
+            },
+            {
+                title: "CHOLERA OUTBREAK",
+                desc: "Contaminated water infects the camp with Cholera!",
+                effect: () => {
+                    if (gameState.supplies.medicine > 0) {
+                        gameState.supplies.medicine--;
+                        log("MEDICAL EMERGENCY: Cholera outbreak! Used 1 medicine kit to cure the team.", "text-green-400");
+                    } else {
+                        gameState.party.forEach(p => { if (p.health > 0) p.health -= 25; });
+                        log("MEDICAL EMERGENCY: Cholera outbreak with no medicine! (-25 HP to all)", "text-red-500");
+                    }
+                }
+            }
+        ];
+
+        function updatePartyHealth() {
+            gameState.party.forEach(p => {
+                p.health = Math.max(0, Math.min(100, p.health));
+                const wasDead = p.status === "DEAD";
+                p.status = p.health > 70 ? "Good" : p.health > 30 ? "Fair" : p.health > 0 ? "Poor" : "DEAD";
+                if (p.health === 0 && !wasDead) {
+                    audio.playDeathJingle();
+                    log(`TRAGEDY: ${p.name} has died on the trail!`, "text-red-500 font-bold");
+                }
+            });
+            if (!gameState.party.some(p => p.health > 0)) {
+                if (!gameState.gameOver) triggerGameOver("All members of your party perished on the trail.");
+                return false;
+            }
+            return true;
+        }
+
+        function triggerRandomEvent() {
+            if (gameState.gameOver) return false;
+            const living = gameState.party.filter(p => p.health > 0);
+            if (living.length === 0) return updatePartyHealth();
+
+            audio.playAlert();
+            const event = RANDOM_EVENTS[Math.floor(Math.random() * RANDOM_EVENTS.length)];
+            const victim = living[Math.floor(Math.random() * living.length)];
+
+            // Every event may receive a living pioneer. Party-wide and wagon
+            // events simply ignore the argument; dispatch never relies on titles.
+            event.effect(victim);
+            return updatePartyHealth();
+        }
+
+        // --- SIERRA NEVADA SPECIAL CLIFF LOWERING EVENT ---
+        function triggerSierraNevadaEvent() {
+            audio.playAlert();
+            gameView.innerHTML = `
+                <div class="pixel-card p-4 space-y-4 text-center">
+                    <h2 class="text-amber-400 text-sm md:text-base font-bold">DONNER PASS / SIERRA NEVADA CLIFF</h2>
+                    <p class="text-[10px] text-green-300 leading-relaxed">
+                        You have reached a sheer 70ft granite cliff face at Donner Pass. Deep snow looms.
+                        To proceed, you must dismantle your wagon and lower it down using heavy ropes wrapped around pines!
+                    </p>
+
+                    <div class="p-3 bg-black border border-green-800 text-[10px] space-y-2">
+                        <div class="text-amber-300">CHOOSE YOUR DESCENT METHOD:</div>
+                        <button id="btnOption1" class="pixel-btn w-full py-2 text-[9px]">METHOD A: Lower wagon with ropes (Requires steady hands)</button>
+                        <button id="btnOption2" class="pixel-btn w-full py-2 text-[9px]">METHOD B: Dismantle wagon entirely & carry pieces (Takes 3 Days)</button>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('btnOption1').onclick = () => {
+                if (Math.random() < 0.5) {
+                    audio.playDeathJingle();
+                    gameState.supplies.food = Math.max(0, gameState.supplies.food - 200);
+                    gameState.wagonHealth -= 20;
+                    log("TRAGEDY AT DONNER PASS: The lowering rope snapped! The wagon crashed down. Lost 200 lbs food and damaged wagon!", "text-red-500");
+                } else {
+                    audio.playFanfare();
+                    log("SUCCESS: Carefully lowered wagon down the cliff without losing a single bolt!", "text-amber-400");
+                }
+                gameState.nextMilestoneIndex++;
+                showMainTrailScreen();
+            };
+
+            document.getElementById('btnOption2').onclick = () => {
+                audio.playClick();
+                gameState.date.setDate(gameState.date.getDate() + 3);
+                log("SAFE CHOICE: Dismantled wagon safely, but lost 3 valuable days to snow accumulation.", "text-cyan-300");
+                gameState.nextMilestoneIndex++;
+                showMainTrailScreen();
+            };
+        }
+
+        // ==========================================
+        // 6. MINI-GAMES: HUNTING & GOLD PANNING
+        // ==========================================
+
+        // --- HUNTING MINI-GAME ---
+        function startHuntingMiniGame() {
+            if (gameState.supplies.ammo <= 0) {
+                log("You have no ammunition to go hunting!", "text-red-400");
+                return;
+            }
+
+            let huntedMeat = 0;
+            let bulletsLeft = Math.min(10, gameState.supplies.ammo);
+            gameState.supplies.ammo -= bulletsLeft;
+
+            gameView.innerHTML = `
+                <div class="space-y-2 text-center">
+                    <div class="flex justify-between text-[10px]">
+                        <span class="text-amber-400">PIXEL HUNTING GROUND</span>
+                        <span>BULLETS: <span id="huntBullets" class="text-amber-300">${bulletsLeft}</span></span>
+                        <span>MEAT HARVESTED: <span id="huntMeat" class="text-green-300">0</span> lbs</span>
+                    </div>
+
+                    <div class="pixel-card p-1 relative">
+                        <canvas id="huntCanvas" width="480" height="240" class="w-full h-auto bg-black border border-green-800 cursor-crosshair"></canvas>
+                    </div>
+                    <div class="text-[9px] text-gray-400">CLICK/TAP ON ANIMALS TO SHOOT!</div>
+                    <button id="btnExitHunt" class="pixel-btn px-4 py-2 text-[10px]">RETURN TO TRAIL</button>
+                </div>
+            `;
+
+            const canvas = document.getElementById('huntCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // Animal Targets
+            let targets = [
+                { x: 0, y: 160, speed: 2, type: 'Bison', meat: 100, width: 24, height: 16, alive: true },
+                { x: 480, y: 180, speed: -3, type: 'Deer', meat: 50, width: 18, height: 14, alive: true },
+                { x: 100, y: 140, speed: 4, type: 'Rabbit', meat: 15, width: 10, height: 8, alive: true }
+            ];
+
+            function renderHunt() {
+                ctx.fillStyle = "#0c1821";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Trees / Environment
+                ctx.fillStyle = "#1b4332";
+                ctx.fillRect(40, 100, 20, 80);
+                ctx.fillRect(380, 90, 25, 90);
+
+                ctx.fillStyle = "#2d6a4f";
+                ctx.fillRect(0, 180, canvas.width, 60);
+
+                targets.forEach(t => {
+                    if (!t.alive) return;
+                    t.x += t.speed;
+                    if (t.x > canvas.width) t.x = -30;
+                    if (t.x < -30) t.x = canvas.width;
+
+                    // Draw Animal Pixel Shape
+                    ctx.fillStyle = t.type === 'Bison' ? "#6f4e37" : (t.type === 'Deer' ? "#c68b59" : "#e5e5e5");
+                    ctx.fillRect(t.x, t.y, t.width, t.height);
+                });
+
+                if (document.getElementById('huntCanvas')) requestAnimationFrame(renderHunt);
+            }
+
+            renderHunt();
+
+            canvas.onclick = (e) => {
+                if (bulletsLeft <= 0) return;
+                audio.playShot();
+                bulletsLeft--;
+                document.getElementById('huntBullets').innerText = bulletsLeft;
+
+                const rect = canvas.getBoundingClientRect();
+                const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+                const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+                targets.forEach(t => {
+                    if (t.alive && clickX >= t.x && clickX <= t.x + t.width && clickY >= t.y && clickY <= t.y + t.height) {
+                        t.alive = false;
+                        huntedMeat += t.meat;
+                        document.getElementById('huntMeat').innerText = huntedMeat;
+                        log(`DIRECT HIT! Shot a ${t.type} for +${t.meat} lbs of meat!`, "text-amber-300");
+                    }
+                });
+            };
+
+            document.getElementById('btnExitHunt').onclick = () => {
+                // Carry limit: 250 lbs
+                const actualMeat = Math.min(250, huntedMeat);
+                gameState.supplies.food += actualMeat;
+                log(`Hunting trip ended. Loaded ${actualMeat} lbs of meat into the wagon.`);
+                showMainTrailScreen();
+            };
+        }
+
+        // --- GOLD PANNING MINI-GAME (CLIMAX) ---
+        function triggerGoldRushEnding() {
+            audio.playFanfare();
+            let goldStrikes = 0;
+
+            gameView.innerHTML = `
+                <div class="space-y-3 text-center">
+                    <h2 class="text-amber-400 text-sm md:text-base font-bold">YOU REACHED SUTTER'S MILL, CALIFORNIA!</h2>
+                    <p class="text-[10px] text-green-300">
+                        Dip your pan into the American River and sift through the sand for gold nuggets!
+                    </p>
+
+                    <div class="pixel-card p-2">
+                        <div class="text-xs text-amber-300 mb-2">GOLD STRIKE TOTAL: <span id="goldVal" class="text-amber-400 font-bold">$0</span></div>
+                        <canvas id="goldCanvas" width="480" height="200" class="w-full h-auto bg-black border border-amber-500 cursor-pointer"></canvas>
+                    </div>
+
+                    <button id="btnClaimFortune" class="pixel-btn w-full py-3 text-xs text-amber-300">CLAIM FORTUNE & CALCULATE FINAL SCORE</button>
+                </div>
+            `;
+
+            const canvas = document.getElementById('goldCanvas');
+            const ctx = canvas.getContext('2d');
+
+            let nuggets = [
+                { x: 80, y: 120, r: 8, val: 250, claimed: false },
+                { x: 220, y: 150, r: 12, val: 500, claimed: false },
+                { x: 360, y: 100, r: 6, val: 150, claimed: false },
+                { x: 150, y: 80, r: 15, val: 1000, claimed: false }
+            ];
+
+            function renderRiver() {
+                ctx.fillStyle = "#0077b6";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Riverbed Gravel
+                ctx.fillStyle = "#3a5a40";
+                ctx.fillRect(0, 140, canvas.width, 60);
+
+                nuggets.forEach(n => {
+                    if (!n.claimed) {
+                        ctx.fillStyle = "#ffb703";
+                        ctx.beginPath();
+                        ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+
+                if (document.getElementById('goldCanvas')) requestAnimationFrame(renderRiver);
+            }
+
+            renderRiver();
+
+            canvas.onclick = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+                const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+                nuggets.forEach(n => {
+                    if (!n.claimed) {
+                        const dist = Math.hypot(clickX - n.x, clickY - n.y);
+                        if (dist <= n.r + 5) {
+                            n.claimed = true;
+                            goldStrikes += n.val;
+                            audio.playFanfare();
+                            document.getElementById('goldVal').innerText = `$${goldStrikes}`;
+                            log(`GOLD STRIKE! Found a nugget worth $${n.val}!`, "text-amber-400 font-bold");
+                        }
+                    }
+                });
+            };
+
+            document.getElementById('btnClaimFortune').onclick = () => {
+                gameState.goldMined = goldStrikes;
+                renderVictoryScreen();
+            };
+        }
+
+        // ==========================================
+        // 7. END GAME & HIGH SCORES
+        // ==========================================
+        function triggerGameOver(reason) {
+            gameState.gameOver = true;
+            audio.playDeathJingle();
+
+            gameView.innerHTML = `
+                <div class="pixel-card p-6 text-center space-y-4 my-auto">
+                    <h2 class="text-red-500 text-base md:text-xl font-bold tracking-widest animate-pulse">GAME OVER</h2>
+                    <p class="text-xs text-amber-300 font-mono">${reason}</p>
+                    <div class="text-[10px] text-gray-400">YOU MET A TRAGIC END ON THE TRAIL...</div>
+
+                    <button id="btnRestart" class="pixel-btn px-6 py-3 text-xs text-amber-300">TRY AGAIN</button>
+                </div>
+            `;
+
+            document.getElementById('btnRestart').onclick = () => showCharacterSelect();
+        }
+
+        function renderVictoryScreen() {
+            gameState.victorious = true;
+
+            const survivors = gameState.party.filter(p => p.health > 0).length;
+            const score = (survivors * 500) + (gameState.cash) + (gameState.goldMined * 2) + (gameState.supplies.food);
+
+            // Store Local High Score
+            let highScores = [];
+            try {
+                const stored = JSON.parse(localStorage.getItem('gold_rush_scores') || '[]');
+                if (Array.isArray(stored)) highScores = stored.filter(s => s && typeof s.name === 'string' && Number.isFinite(s.score) && typeof s.date === 'string');
+            } catch (error) { /* Scoring still works without browser storage. */ }
+            highScores.push({ name: gameState.leaderName, score: score, date: new Date().toLocaleDateString() });
+            highScores.sort((a, b) => b.score - a.score);
+            highScores = highScores.slice(0, 5);
+            try { localStorage.setItem('gold_rush_scores', JSON.stringify(highScores)); } catch (error) { /* Optional persistence. */ }
+
+            gameView.innerHTML = `
+                <div class="pixel-card p-4 space-y-3 text-center">
+                    <h2 class="text-amber-400 text-base font-bold">VICTORY! YOU REACHED THE GOLDFIELDS!</h2>
+                    
+                    <div class="grid grid-cols-2 gap-2 text-[10px] text-left">
+                        <div class="pixel-card p-2">SURVIVING PARTY: <span class="text-green-300">${survivors} / 5</span></div>
+                        <div class="pixel-card p-2">REMAINING CASH: <span class="text-green-300">$${gameState.cash}</span></div>
+                        <div class="pixel-card p-2">GOLD MINED: <span class="text-amber-400">$${gameState.goldMined}</span></div>
+                        <div class="pixel-card p-2">FINAL SCORE: <span class="text-amber-400 font-bold">${score} PTS</span></div>
+                    </div>
+
+                    <!-- Hall of Fame -->
+                    <div class="pixel-card p-3 text-left">
+                        <div class="text-xs text-amber-300 border-b border-green-800 pb-1 mb-2">HALL OF FAME (TOP PIONEERS)</div>
+                        <div class="space-y-1 text-[9px]">
+                            ${highScores.map((s, i) => `
+                                <div class="flex justify-between">
+                                    <span>${i + 1}. ${escapeHTML(s.name)}</span>
+                                    <span class="text-amber-400">${s.score} PTS (${escapeHTML(s.date)})</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <button id="btnPlayAgain" class="pixel-btn w-full py-3 text-xs text-amber-300">PLAY AGAIN</button>
+                </div>
+            `;
+
+            document.getElementById('btnPlayAgain').onclick = () => showCharacterSelect();
+        }
+
+        // ==========================================
+        // 8. INITIALIZATION
+        // ==========================================
+        document.getElementById('soundToggleBtn').onclick = () => {
+            audio.enabled = !audio.enabled;
+            document.getElementById('soundStatus').innerText = audio.enabled ? "ON" : "OFF";
+        };
+
+        // Start Game
+        showCharacterSelect();
+    </script>
+<div class="copyright-credit">© 2026 <a href="https://whispr.dev/" target="_blank" rel="noopener noreferrer">whispr.dev</a></div>
+</body>
+</html>

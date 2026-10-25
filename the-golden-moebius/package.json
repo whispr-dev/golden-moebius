@@ -1,0 +1,19 @@
+{
+  "name": "the-golden-moebius",
+  "version": "1.1.1",
+  "private": true,
+  "description": "The Golden M\u00f6bius with shared, replay-verified West Bank leaderboards.",
+  "devDependencies": {
+    "tailwindcss": "3.4.17"
+  },
+  "scripts": {
+    "build:trail": "tailwindcss -c tailwind.config.cjs -i src/trail.css -o dist/assets/trail.css --minify",
+    "check": "python3 checks/check_site.py && node --check dist/assets/home.js && node --check dist/assets/experience.js && node --test checks/engine.test.mjs",
+    "dev": "node leaderboard/server.mjs --dev",
+    "test:leaderboard": "node --test checks/leaderboard.test.mjs"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  }
+}

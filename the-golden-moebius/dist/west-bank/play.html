@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#191c1b">
+  <meta name="description" content="Three doors. One quick draw. A lovingly rebuilt Western arcade game, playable in your browser with keyboard, mouse or touch.">
+  <title>West Bank — Frontier Edition</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./leaderboard.css?v=1.1.1">
+  <script type="module" src="./game.js?v=1.1.1"></script>
+<style>
+body{background:#191c1b}.page{max-width:1150px;padding:16px 20px}.masthead,.intro,.sidebar,.field-guide,.about,footer{display:none}.game-layout{display:block}.arcade-caption{margin-bottom:16px}.playfield{max-height:none}@media(max-width:580px){.page{padding:8px}.playfield{min-height:360px}}
+</style><link rel="stylesheet" href="../assets/credits.css">
+</head>
+<body class="golden-bank">
+  <div class="maker-credit">made by <a href="https://whispr.dev/" target="_blank" rel="noopener noreferrer">whispr.dev</a></div>
+  <div class="page">
+    <header class="masthead">
+      <a href="./" class="brand" aria-label="West Bank home"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="m20 2 5 10 11 1-6 9 3 12-13-5-13 5 3-12-6-9 11-1Z"/><circle cx="20" cy="20" r="5"/></svg><span>WEST BANK<small>FRONTIER EDITION</small></span></a>
+      <div class="edition"><span class="status-dot"></span> THE ARCADE IS OPEN <span class="edition-sep">/</span> EST. 1986 · REBUILT 2026</div>
+      <a class="text-link" href="#field-guide">HOW TO PLAY <span>↗</span></a>
+    </header>
+    <main>
+      <section class="intro" aria-labelledby="title">
+        <div><p class="eyebrow">A LITTLE NOSTALGIA. A LOT OF NERVE.</p><h1 id="title">Welcome to <em>West Bank.</em></h1><p class="dek">Keep the gold safe. Keep the good folks alive. Keep your nerve.</p></div>
+        <div class="intro-stamp"><span>9 DOORS</span><span>3 LIVES</span><strong>ONE SHERIFF.</strong></div>
+      </section>
+      <div class="game-layout">
+        <section class="arcade" aria-label="West Bank arcade game">
+          <div class="cabinet-top"><span><i></i> NOW PLAYING <b>WEST BANK</b></span><span class="cabinet-actions"><button id="sound" type="button" aria-pressed="false" title="Toggle sound (M)">♪ <span>SOUND ON</span></button><button id="fullscreen" type="button" aria-label="Fullscreen" title="Fullscreen">⛶</button></span></div>
+          <div class="playfield" id="playfield">
+            <canvas id="screen" width="480" height="300" tabindex="0" aria-label="Three bank doors. Fire with 1, 2, 3 or tap a door; move with O and P or arrow keys; Escape pauses."></canvas>
+            <div id="overlay" class="overlay">
+              <div class="poster" id="poster">
+                <p class="poster-top">THE FRONTIER NEEDS YOU</p>
+                <div class="poster-star" aria-hidden="true">✦</div>
+                <h2 id="overlay-title">WANTED</h2>
+                <p id="overlay-subtitle" class="poster-subtitle">A steady hand. A cooler head.</p>
+                <div id="overlay-detail" class="poster-detail">Guard nine doors. Let customers bank their gold.<br>When a gun comes up, put the outlaw down.</div>
+                <form id="score-form" hidden>
+          <h3 id="score-result">Enter your name for the leaderboard</h3>
+          <label id="saved-choice-label" for="saved-choice" hidden>Saved run<select id="saved-choice"></select></label>
+          <div class="score-fields"><label for="score-name">Your public name<input id="score-name" name="name" maxlength="24" required autocomplete="nickname" placeholder="e.g. wofl" aria-describedby="score-feedback"></label><button id="score-submit" type="submit">POST SCORE ↗</button></div>
+          <p id="score-feedback" role="status">Posting is optional.</p>
+          <button id="score-discard" class="quiet-button" type="button">Discard this saved run</button>
+        </form>
+                <p id="finish-notice" class="finish-notice" role="status" hidden></p>
+                <label id="difficulty-label" class="difficulty-label" for="difficulty">CHOOSE YOUR BADGE</label>
+                <select id="difficulty"><option value="easy">☆ Tenderfoot — a little more time</option><option value="classic" selected>★ Deputy — the classic challenge</option><option value="hard">★★ Gunslinger — keep up</option></select>
+                <button id="start" class="start-button" type="button">PLAY RANKED <span>→</span></button>
+                <div class="finish-actions"><button id="done" type="button" hidden>DONE · MAIN MENU</button><button id="finish-run" type="button" hidden>FINISH RUN & SAVE SCORE</button><button id="practice-start" type="button">PLAY PRACTICE</button><button id="saved-scores" type="button" hidden>POST SAVED SCORE</button></div>
+                <p class="poster-bottom" id="overlay-foot">NO COINS NEEDED. JUST COURAGE.</p>
+              </div>
+            </div>
+            <div class="screen-grain" aria-hidden="true"></div>
+            <button class="pause-chip" id="pause" type="button" hidden>Ⅱ PAUSE</button>
+          </div>
+          <div class="controls-panel">
+            <div class="move-controls"><button id="left" type="button" aria-label="Previous bank section">← <kbd>O</kbd></button><span>MOVE</span><button id="right" type="button" aria-label="Next bank section"><kbd>P</kbd> →</button></div>
+            <div class="shoot-controls"><button type="button" data-fire="0"><kbd>1</kbd><span>FIRE LEFT</span></button><button type="button" data-fire="1"><kbd>2</kbd><span>FIRE MIDDLE</span></button><button type="button" data-fire="2"><kbd>3</kbd><span>FIRE RIGHT</span></button></div>
+            <div class="pause-hint"><kbd>ESC</kbd><span>PAUSE</span></div>
+          </div>
+          <p id="run-badge" class="run-badge" role="status">Choose a badge, then Play ranked to compete.</p>
+          <div class="arcade-caption"><span>KEYBOARD, MOUSE OR TOUCH. YOUR CALL.</span><span>50 HZ <span class="caption-cross">✦</span> HANDCRAFTED PIXELS</span></div>
+        </section>
+        <aside class="sidebar">
+          <section class="record-card"><p class="eyebrow">YOUR LOCAL LEGEND</p><div class="record-head"><h2>Best on the frontier</h2><span aria-hidden="true">✧</span></div><strong id="high-score">$000000</strong><div class="record-bottom"><span id="record-mode">DEPUTY</span><span>SAVED ON THIS DEVICE</span></div></section>
+          <section class="briefing-card"><p class="eyebrow">A WORD FROM THE SHERIFF</p><h2>Fast is good.<br><em>Right is better.</em></h2><p>Not everyone behind a door is trouble. Wait for a drawn pistol. Innocent folks are here to deposit, not duel.</p><div class="briefing-divider"></div><div class="mini-rule"><span class="rule-icon gold">$</span><p><strong>Gold bag? Let them be.</strong><span>Deposits fill your bank ledger.</span></p></div><div class="mini-rule"><span class="rule-icon red">!</span><p><strong>Gun up? Draw fast.</strong><span>A holstered gun isn’t a target.</span></p></div><a class="guide-link" href="#field-guide">READ THE FIELD GUIDE <span>↗</span></a></section>
+          <div class="offline-note"><span>◈</span><p>No account. No downloads.<br>Just you against the Wild West.</p></div>
+        </aside>
+      </div>
+
+      <section class="leaderboard" id="leaderboard" aria-labelledby="leaderboard-title">
+        <div class="leaderboard-heading"><div><p class="eyebrow">THE FRONTIER’S FINEST</p><h2 id="leaderboard-title">A name worth outdrawing.</h2></div><button id="board-refresh" type="button">Refresh ↻</button></div>
+        <p class="leaderboard-intro">Three badges. Three leaderboards. Finish a run, enter your name on the result screen, then dare the world to beat it.</p>
+        <p id="ranked-status" class="ranked-status" role="status">Start a game to compete for a place on the public board.</p>
+
+        <div class="board-tabs" role="group" aria-label="Leaderboard difficulty"><button type="button" data-board="easy" aria-pressed="false">☆ Tenderfoot</button><button type="button" data-board="classic" aria-pressed="true">★ Deputy</button><button type="button" data-board="hard" aria-pressed="false">★★ Gunslinger</button></div>
+        <div class="board-scroll" tabindex="0" role="region" aria-label="Leaderboard results"><table><caption id="board-caption">Deputy · Top 25</caption><thead><tr><th scope="col">Rank</th><th scope="col">Name</th><th scope="col">Score</th><th scope="col">Reached</th><th scope="col">Date</th></tr></thead><tbody id="board-rows"></tbody></table></div>
+        <p id="board-status" role="status">Loading the frontier’s finest…</p>
+        <p class="board-notes">Scores are checked against a replay of the game. Highest score wins; ties favour a completed game, then the furthest shift, fewer active ticks and the earlier result. Public names are nicknames, not verified identities. Your browser keeps a player key; clearing storage or changing device creates a new player.</p>
+      </section>
+      <section class="field-guide" id="field-guide" aria-labelledby="guide-title"><div class="guide-heading"><div><p class="eyebrow">KNOW WHO’S BEHIND THE DOOR</p><h2 id="guide-title">The sheriff’s field guide.</h2></div><p>Three rules between you and a long retirement.</p></div><div class="guide-grid"><article><span class="guide-no">01 / THE HONEST FOLKS</span><h3>Let the money come to you.</h3><p>Farmers and townsfolk automatically deposit gold. Collect one deposit at each of the nine doors. Move between sections with <kbd>O</kbd> / <kbd>P</kbd> or the arrows when every door is shut.</p></article><article><span class="guide-no">02 / THE BAD COMPANY</span><h3>Watch the hands. Then fire.</h3><p>Press <kbd>1</kbd>, <kbd>2</kbd> or <kbd>3</kbd>, or tap the corresponding door. Some outlaws arrive armed. Others wait to draw. Shoot a customer or fire before a pistol appears and you lose a life.</p></article><article><span class="guide-no">03 / THE WILD CARDS</span><h3>Keep something under your hat.</h3><p>From shift two, shoot off all five stacked hats. Shoot the gold beneath for a deposit; leave a bomb untouched. Fill the ledger, then survive three duellists to earn a life and a $500 bonus.</p></article></div></section>
+      <details class="about"><summary>About this recreation <span>+</span></summary><div><p>An independent, browser-native tribute to <cite>West Bank</cite> by Dinamic Software. This edition uses nine doors in the spirit of the Amstrad CPC version, newly drawn pixel graphics and synthesized sound. It is a reinterpretation, not an emulator or a frame-exact port.</p><p>Two days, nine shifts per day. New characters arrive as you advance; the final two shifts of each day take place at night. Five lives maximum. Pause with <kbd>Esc</kbd> or <kbd>Space</kbd>, mute with <kbd>M</kbd>. Switching away pauses the game. High scores are kept locally for each difficulty when browser storage is available.</p><p>Ranked play contacts this site’s scorekeeper. Posting shares your chosen public name and verified result; personal bests, your player key and the sound preference are kept in this browser. There are no analytics or account cookies. Hosting may have its own access and logging behavior. Original game names and history are credited to their respective creators. <a href="https://retrogames.biz/games/c64/west-bank/" target="_blank" rel="noopener noreferrer">Read the original instructions ↗</a></p></div></details>
+    </main>
+    <footer><span>WEST BANK <b>✦</b> FRONTIER EDITION</span><span>BUILT FOR THE LOVE OF THE GAME.</span><a href="./west-bank-source.tar.gz" download>TAKE THE SOURCE ↗</a></footer>
+    <p class="sr-only" id="announcement" role="status" aria-live="polite"></p>
+  </div>
+<div class="copyright-credit">© 2026 <a href="https://whispr.dev/" target="_blank" rel="noopener noreferrer">whispr.dev</a></div>
+</body>
+</html>
